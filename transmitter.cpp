@@ -6,7 +6,8 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <unistd.h>
-#include <regex>
+#include <iostream>
+//#include <regex>
 
 /* Maximum messages length */
 #define MAXLEN 2
@@ -21,6 +22,7 @@ FILE *fp;
 bool is_ip_address;
 char buffer[MAXLEN], lastSignalRecv = XON;
 
+using namespace std;
 int main(int argc, char *argv[]){
 
     printf("Memulai program ...");
@@ -47,10 +49,11 @@ int main(int argc, char *argv[]){
 
     serv_addr.sin_family = AF_INET;
 
-    if (! std::regex_match (argv[1], std::regex("^(\\d{0,3}\\.){3}\\d{0,3}$") )){
+    /*if (! std::regex_match (argv[1], std::regex("^(\\d{0,3}\\.){3}\\d{0,3}$") )){
         is_ip_address = true;
-    }
-
+    }*/
+	 is_ip_address = true;
+	 
     if ( is_ip_address ) {
         serv_addr.sin_addr.s_addr = inet_addr(argv[1]);
     } else {
@@ -67,8 +70,9 @@ int main(int argc, char *argv[]){
 
     /* converts a port number in host byte order to a port number in network byte order */
     serv_addr.sin_port = htons(port);
+    cout<<serv_addr.sin_port<<endl;
 
-    int pid = fork();
+    pid_t pid = fork();
 
     if ( pid == 0 ) { // Child Process
         printf("Hello I am the child process\n");
@@ -91,6 +95,7 @@ int main(int argc, char *argv[]){
                 printf("XON diterima.");
             }
         }
+        printf("Exiting child...");
     } else if (pid > 0 ) { // Parent Process
         printf("Hello I am the parent process \n");
         printf("My actual pid is %d \n",getpid());
@@ -116,13 +121,15 @@ int main(int argc, char *argv[]){
             bzero(buffer, MAXLEN);
 
             counter++;
+			
         }
+        printf("Exiting parent...");
     } else {
         printf("Error\n");
         exit(1);
     }
 
-    printf("Exiting ...");
+    
 
    return 0;
 }
