@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <iostream>
-#include <regex>
+#include <regex.h>
 
 /* Maximum messages length */
 #define MAXLEN 2
@@ -51,9 +51,19 @@ int main(int argc, char *argv[]){
 
     serv_addr.sin_family = AF_INET;
 
-    if (std::regex_match (argv[1], std::regex("^(\\d{0,3}\\.){3}\\d{0,3}$") )){
-        is_ip_address = true;
+	int r;
+	regex_t reg;
+
+    if (r = regcomp(&reg, "^(\\d{0,3}\\.){3}\\d{0,3}$", REG_NOSUB | REG_EXTENDED) ){
+        char errbuf[1024];
+        regerror(r, &reg, errbuf, sizeof(errbuf));
+        printf("error: %s\n", errbuf);
+        return 1;
     }
+    
+    if (regexec(&reg, argv[1],0,NULL,0) != REG_NOMATCH){
+		is_ip_address = true;
+	}
 
     if ( is_ip_address ) {
         serv_addr.sin_addr.s_addr = inet_addr(argv[1]);
@@ -110,7 +120,6 @@ int main(int argc, char *argv[]){
         printf("Mengirim byte ke-%d: '%s'\n", counter, buffer);
         sendto(sockfd,buffer, strlen(buffer),0,(struct sockaddr *)&serv_addr,sizeof(serv_addr));
         bzero(buffer, MAXLEN);
-
         counter++;
     }
 
