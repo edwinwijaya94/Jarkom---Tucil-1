@@ -6,8 +6,9 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <iostream>
-//#include <regex>
+#include <regex>
 
 /* Maximum messages length */
 #define MAXLEN 2
@@ -23,6 +24,9 @@ bool is_ip_address;
 char buffer[MAXLEN], lastSignalRecv = XON;
 
 using namespace std;
+
+static void *sendSignal(void*);
+
 int main(int argc, char *argv[]){
 
     printf("Memulai program ...");
@@ -50,7 +54,6 @@ int main(int argc, char *argv[]){
     if (! std::regex_match (argv[1], std::regex("^(\\d{0,3}\\.){3}\\d{0,3}$") )){
         is_ip_address = true;
     }
-	 is_ip_address = true;
 
     if ( is_ip_address ) {
         serv_addr.sin_addr.s_addr = inet_addr(argv[1]);
@@ -72,64 +75,67 @@ int main(int argc, char *argv[]){
     serv_addr.sin_port = htons(port);
     cout<<serv_addr.sin_port<<endl;
 
-    pid_t pid = fork();
+    /* Create new thread */
+  	pthread_t send_signal_thread;
 
-    if ( pid == 0 ) { // Child Process
-        printf("Hello I am the child process\n");
-        printf("My pid is %d\n",getpid());
+    // "CONSUME" THREAD
+  	if(pthread_create(&send_signal_thread, NULL, &sendSignal, NULL)){
+  		fprintf(stderr, "Error creating thread\n");
+  		return 1;
+  	}
 
-        while (true) {
-            n = recvfrom(sockfd,buffer,MAXLEN,0,NULL,NULL);
-            // buffer[n]=0;
-            fputs(buffer,stdout);
+    printf("Hello I am the parent process \n");
+    printf("My actual pid is %d \n",getpid());
+    printf("Opening file %s \n",argv[3]);
 
-            if (n < 0) {
-               perror("ERROR reading from socket");
-               exit(1);
-            }
-
-            lastSignalRecv = buffer[0];
-            if (lastSignalRecv == XOFF) {
-                printf("XOFF diterima.");
-            } else if (lastSignalRecv == XON) {
-                printf("XON diterima.");
-            }
-        }
-        printf("Exiting child...");
-    } else if (pid > 0 ) { // Parent Process
-        printf("Hello I am the parent process \n");
-        printf("My actual pid is %d \n",getpid());
-        printf("Opening file %s \n",argv[3]);
-
-        /* opening file for reading */
-        fp = fopen(argv[3] , "r");
-        if(fp == NULL)
-        {
-           perror("Error opening file");
-           exit(1);
-        }
-
-        int counter = 1;
-
-        while(fgets(buffer, MAXLEN, fp) != NULL ) {
-            while (lastSignalRecv == XOFF) {
-                printf("Menunggu XON...");
-            }
-
-            printf("Mengirim byte ke-%d: '%s'\n", counter, buffer);
-            sendto(sockfd,buffer, strlen(buffer),0,(struct sockaddr *)&serv_addr,sizeof(serv_addr));
-            bzero(buffer, MAXLEN);
-
-            counter++;
-
-        }
-        printf("Exiting parent...");
-    } else {
-        printf("Error\n");
-        exit(1);
+    /* opening file for reading */
+    fp = fopen(argv[3] , "r");
+    if(fp == NULL)
+    {
+       perror("Error opening file");
+       exit(1);
     }
 
+    int counter = 1;
 
+    while(fgets(buffer, MAXLEN, fp) != NULL ) {
+        while (lastSignalRecv == XOFF) {
+            printf("Menunggu XON...");
+        }
 
+        printf("Mengirim byte ke-%d: '%s'\n", counter, buffer);
+        sendto(sockfd,buffer, strlen(buffer),0,(struct sockaddr *)&serv_addr,sizeof(serv_addr));
+        bzero(buffer, MAXLEN);
+
+        counter++;
+    }
+
+    printf("Exiting parent...");
    return 0;
+}
+
+// Thread function
+static void *sendSignal(void* param){
+  printf("Hello I am the child process\n");
+  printf("My pid is %d\n",getpid());
+
+  while (true) {
+      n = recvfrom(sockfd,buffer,MAXLEN,0,NULL,NULL);
+      // buffer[n]=0;
+      fputs(buffer,stdout);
+
+      if (n < 0) {
+         perror("ERROR reading from socket");
+         exit(1);
+      }
+
+      lastSignalRecv = buffer[0];
+      if (lastSignalRecv == XOFF) {
+          printf("XOFF diterima.");
+      } else if (lastSignalRecv == XON) {
+          printf("XON diterima.");
+      }
+  }
+  printf("Exiting child...");
+	pthread_exit(0);
 }
