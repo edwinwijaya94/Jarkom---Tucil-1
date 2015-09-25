@@ -32,8 +32,6 @@ int main(int argc, char *argv[]){
 
     port = atoi(argv[2]);
 
-    printf("Membuat socket untuk koneksi ke %s:%s ...", argv[1], argv[2]);
-
     /* Create a socket point */
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 
@@ -47,17 +45,19 @@ int main(int argc, char *argv[]){
 
     serv_addr.sin_family = AF_INET;
 
-    if (! std::regex_match (argv[1], std::regex("^(\\d{0,3}\\.){3}\\d{0,3}$") )){
+    if (std::regex_match (argv[1], std::regex("^(\\d{0,3}\\.){3}\\d{0,3}$") )){
         is_ip_address = true;
     }
 
     if ( is_ip_address ) {
         serv_addr.sin_addr.s_addr = inet_addr(argv[1]);
+
+        printf("Membuat socket untuk koneksi ke %s:%s ...", argv[1], argv[2]);
     } else {
         /* Map host name to ip address */
         server = gethostbyname(argv[1]);
 
-        if (server == NULL) {
+        if (!server) {
            fprintf(stderr,"ERROR, no such host\n");
            exit(0);
         }
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]){
     /* converts a port number in host byte order to a port number in network byte order */
     serv_addr.sin_port = htons(port);
 
-    int pid = fork();
+    pid_t pid = fork();
 
     if ( pid == 0 ) { // Child Process
         printf("Hello I am the child process\n");
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]){
     } else if (pid > 0 ) { // Parent Process
         printf("Hello I am the parent process \n");
         printf("My actual pid is %d \n",getpid());
-        printf("Opening file %s \n",argv[3]);        
+        printf("Opening file %s \n",argv[3]);
 
         /* opening file for reading */
         fp = fopen(argv[3] , "r");
