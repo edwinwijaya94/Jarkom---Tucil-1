@@ -13,7 +13,7 @@
 #define CR 13 		/*Carriage Return */
 #define LF 10 		/*Line Feed */
 #define NAK 21 		/*Negative Acknowledgement */
-#define Endfile 17 	/*End of file (DC1) */
+#define Endfile 26 	/*End of file (DC1) */
 #define ESC 27 		/*ESC key */
 
 /* XON/XOFF protocol */

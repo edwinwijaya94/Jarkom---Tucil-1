@@ -51,7 +51,7 @@ int main(int argc, char *argv[]){
 
     serv_addr.sin_family = AF_INET;
 
-    if (! std::regex_match (argv[1], std::regex("^(\\d{0,3}\\.){3}\\d{0,3}$") )){
+    if (std::regex_match (argv[1], std::regex("^(\\d{0,3}\\.){3}\\d{0,3}$") )){
         is_ip_address = true;
     }
 
@@ -99,8 +99,12 @@ int main(int argc, char *argv[]){
     int counter = 1;
 
     while(fgets(buffer, MAXLEN, fp) != NULL ) {
+      bool xx = false;
         while (lastSignalRecv == XOFF) {
-            printf("Menunggu XON...");
+          if (!xx){
+              printf("Menunggu XON...\n");
+              xx = true;
+          }
         }
 
         printf("Mengirim byte ke-%d: '%s'\n", counter, buffer);
@@ -110,7 +114,7 @@ int main(int argc, char *argv[]){
         counter++;
     }
 
-    printf("Exiting parent...");
+    printf("Exiting parent...\n");
    return 0;
 }
 
@@ -120,22 +124,28 @@ static void *sendSignal(void* param){
   printf("My pid is %d\n",getpid());
 
   while (true) {
-      n = recvfrom(sockfd,buffer,MAXLEN,0,NULL,NULL);
+
+      int serv_len = sizeof(serv_addr);
+
+      char _buffer[MAXLEN];
+
+      n = recvfrom(sockfd,_buffer,strlen(_buffer),0,(struct sockaddr *)&serv_addr,(socklen_t*) &serv_len);
       // buffer[n]=0;
-      fputs(buffer,stdout);
+      // fputs(_buffer,stdout);
 
       if (n < 0) {
          perror("ERROR reading from socket");
          exit(1);
       }
 
-      lastSignalRecv = buffer[0];
+      lastSignalRecv = _buffer[0];
       if (lastSignalRecv == XOFF) {
-          printf("XOFF diterima.");
+          printf("XOFF diterima.\n");
       } else if (lastSignalRecv == XON) {
-          printf("XON diterima.");
+          printf("XON diterima.\n");
       }
+
   }
-  printf("Exiting child...");
+  printf("Exiting child...\n");
 	pthread_exit(0);
 }
